@@ -1,4 +1,4 @@
-This is the useful skeleton of WebSockets Client for cTrader's Open API in Python. 
+This is the skeleton of a WebSockets Client for cTrader's Open API in Python. 
 
 I didn't want to use the SDK (and I can't remember why) and this turned out to be a simple and effective alternative that doesn't add another dependency to your project.
 
