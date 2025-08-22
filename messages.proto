@@ -1,0 +1,263 @@
+/*
+ * Protobuf to JSON Conversion Rules for cTrader API:
+ *
+ * - Required/Optional Fields: Become JSON key-value pairs. Required fields must always be present;
+ * optional fields can be omitted if not needed.
+ * - string: Converts to a JSON string.
+ * - int32, int64, uint64: Convert to a JSON number (integer).
+ * - double: Converts to a JSON number (float/double).
+ * - bool: Converts to a JSON boolean (true/false).
+ * - enum: Converts to a JSON string representing the enum member's name (e.g., "MARKET", "BUY").
+ * - Nested Messages: Convert to nested JSON objects.
+ * - Repeated Fields: Convert to JSON arrays.
+ */
+
+syntax = "proto2";
+
+/** Request for the authorizing an application to work with the cTrader platform Proxies. */
+message ProtoOAApplicationAuthReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_APPLICATION_AUTH_REQ];
+
+    required string clientId = 2; // The unique Client ID provided during the registration.
+    required string clientSecret = 3; // The unique Client Secret provided during the registration.
+}
+
+/** Response to the ProtoOAApplicationAuthReq request. */
+message ProtoOAApplicationAuthRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_APPLICATION_AUTH_RES];
+}
+
+/** Request for authorizing of the trading account session. Requires established authorized connection with the client application using ProtoOAApplicationAuthReq. */
+message ProtoOAAccountAuthReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_ACCOUNT_AUTH_REQ];
+
+    required int64 ctidTraderAccountId = 2; // The unique identifier of the trader's account in cTrader platform.
+    required string accessToken = 3; // The Access Token issued for providing access to the Trader's Account.
+}
+
+/** Response to the ProtoOAApplicationAuthRes request. */
+message ProtoOAAccountAuthRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_ACCOUNT_AUTH_RES];
+
+    required int64 ctidTraderAccountId = 2; // The unique identifier of the trader's account in cTrader platform.
+}
+
+/** Generic response when an ERROR occurred. */
+message ProtoOAErrorRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_ERROR_RES];
+
+    optional int64 ctidTraderAccountId = 2; // The unique identifier of the trader's account in cTrader platform.
+    required string errorCode = 3; // The name of the ProtoErrorCode or the other custom ErrorCodes (e.g. ProtoCHErrorCode).
+    optional string description = 4; // The error description.
+    optional int64 maintenanceEndTimestamp = 5; // The Unix time in seconds when the current maintenance session will be ended.
+    optional uint64 retryAfter = 6; // When you hit rate limit with errorCode=BLOCKED_PAYLOAD_TYPE, this field will contain amount of seconds until related payload type will be unlocked.
+}
+
+/** Request for sending a new trading order. Allowed only if the accessToken has the "trade" permissions for the trading account. */
+message ProtoOANewOrderReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_NEW_ORDER_REQ];
+
+    required int64 ctidTraderAccountId = 2; // The unique identifier of the trader's account in cTrader platform.
+    required int64 symbolId = 3; // The unique identifier of a symbol in cTrader platform.
+    required ProtoOAOrderType orderType = 4; // The type of an order - MARKET, LIMIT, STOP, MARKET_RANGE, STOP_LIMIT.
+    required ProtoOATradeSide tradeSide = 5; // The trade direction - BUY or SELL.
+    required int64 volume = 6; // The volume represented in 0.01 of a unit (e.g. 1000 in protocol means 10.00 units).
+    optional double limitPrice = 7; // The limit price, can be specified for the LIMIT order only.
+    optional double stopPrice = 8; // Stop Price, can be specified for the STOP and the STOP_LIMIT orders only.
+    optional ProtoOATimeInForce timeInForce = 9 [default = GOOD_TILL_CANCEL]; // The specific order execution or expiration instruction - GOOD_TILL_DATE, GOOD_TILL_CANCEL, IMMEDIATE_OR_CANCEL, FILL_OR_KILL, MARKET_ON_OPEN.
+    optional int64 expirationTimestamp = 10; // The Unix time in milliseconds of Order expiration. Should be set for the Good Till Date orders.
+    optional double stopLoss = 11; // The absolute Stop Loss price (1.23456 for example). Not supported for the MARKER orders.
+    optional double takeProfit = 12; // The absolute Take Profit price (1.23456 for example). Unsupported for the MARKER orders.
+    optional string comment = 13; // User-specified comment. MaxLength = 512.
+    optional double baseSlippagePrice = 14; // Base price to calculate relative slippage price for MARKET_RANGE order.
+    optional int32 slippageInPoints = 15; // Slippage distance for MARKET_RANGE and STOP_LIMIT order.
+    optional string label = 16; // User-specified label. MaxLength = 100.
+    optional int64 positionId = 17; // Reference to the existing position if the Order is intended to modify it.
+    optional string clientOrderId = 18; // Optional user-specific clientOrderId (similar to FIX ClOrderID). MaxLength = 50.
+    optional int64 relativeStopLoss = 19; // Relative Stop Loss that can be specified instead of the absolute as one. Specified in 1/100000 of unit of a price. (e.g. 123000 in protocol means 1.23, 53423782 means 534.23782) For BUY stopLoss = entryPrice - relativeStopLoss, for SELL stopLoss = entryPrice + relativeStopLoss.
+    optional int64 relativeTakeProfit = 20; // Relative Take Profit that can be specified instead of the absolute one. Specified in 1/100000 of unit of a price. (e.g. 123000 in protocol means 1.23, 53423782 means 534.23782) For BUY takeProfit = entryPrice + relativeTakeProfit, for SELL takeProfit = entryPrice - relativeTakeProfit.
+    optional bool guaranteedStopLoss = 21; // If TRUE then stopLoss is guaranteed. Required to be set to TRUE for the Limited Risk accounts (ProtoOATrader.isLimitedRisk=true).
+    optional bool trailingStopLoss = 22; // If TRUE then the Stop Loss is Trailing.
+    optional ProtoOAOrderTriggerMethod stopTriggerMethod = 23 [default = TRADE]; // Trigger method for the STOP or the STOP_LIMIT pending order.
+}
+
+/** Event that is sent following the successful order acceptance or execution by the server. Acts as response to the ProtoOANewOrderReq, ProtoOACancelOrderReq, ProtoOAAmendOrderReq, ProtoOAAmendPositionSLTPReq, ProtoOAClosePositionReq requests. Also, the event is sent when a Deposit/Withdrawal took place. */
+message ProtoOAExecutionEvent {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_EXECUTION_EVENT];
+
+    required int64 ctidTraderAccountId = 2; // Unique identifier of the trader's account. Used to match responses to trader's accounts.
+    required ProtoOAExecutionType executionType = 3; // Type of the order operation. For example: ACCEPTED, FILLED, etc.
+    optional ProtoOAPosition position = 4; // Reference to the position linked with the execution
+    optional ProtoOAOrder order = 5; // Reference to the initial order.
+    optional ProtoOADeal deal = 6; // Reference to the deal (execution).
+    optional ProtoOABonusDepositWithdraw bonusDepositWithdraw = 7; // Reference to the Bonus Deposit or Withdrawal operation.
+    optional ProtoOADepositWithdraw depositWithdraw = 8; // Reference to the Deposit or Withdrawal operation.
+    optional string errorCode = 9; // The name of the ProtoErrorCode or the other custom ErrorCodes (e.g. ProtoCHErrorCode).
+    optional bool isServerEvent = 10; // If TRUE then the event generated by the server logic instead of the trader's request. (e.g. stop-out).
+}
+
+/** Request for amending StopLoss and TakeProfit of existing position. Allowed only if the accessToken has "trade" permissions for the trading account. */
+message ProtoOAAmendPositionSLTPReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_AMEND_POSITION_SLTP_REQ];
+
+    required int64 ctidTraderAccountId = 2; // Unique identifier of the trader's account. Used to match responses to trader's accounts.
+    required int64 positionId = 3; // The unique ID of the position to amend.
+    optional double stopLoss = 4; // Absolute Stop Loss price (1.23456 for example).
+    optional double takeProfit = 5; // Absolute Take Profit price (1.26543 for example).
+    optional bool guaranteedStopLoss = 7; //If TRUE then the Stop Loss is guaranteed. Available for the French Risk or the Guaranteed Stop Loss Accounts.
+    optional bool trailingStopLoss = 8; //If TRUE then the Trailing Stop Loss is applied.
+    optional ProtoOAOrderTriggerMethod stopLossTriggerMethod = 9 [default = TRADE]; // The Stop trigger method for the Stop Loss/Take Profit order.
+}
+
+/** Event that is sent when errors occur during the order requests. */
+message ProtoOAOrderErrorEvent {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_ORDER_ERROR_EVENT];
+
+    required int64 ctidTraderAccountId = 5; //Unique identifier of the trader's account. Used to match responses to trader's accounts.
+    required string errorCode = 2; // The name of the ProtoErrorCode or the other custom ErrorCodes (e.g. ProtoCHErrorCode).
+    optional int64 orderId = 3; // The unique ID of the order.
+    optional int64 positionId = 6; // The unique ID of the position.
+    optional string description = 7; // The error description.
+}
+
+message ProtoOAClosePositionReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_CLOSE_POSITION_REQ];
+
+    required int64 ctidTraderAccountId = 2; // Unique identifier of the trader's account. Used to match responses to trader's accounts.
+    required int64 positionId = 3; // The unique ID of the position to close.
+    required int64 volume = 4; // Volume to close, represented in 0.01 of a unit (e.g. 1000 in protocol means 10.00 units).
+}
+
+/** Response to the ProtoOAGetAccountListByAccessTokenReq request. */
+message ProtoOAGetAccountListByAccessTokenRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_GET_ACCOUNTS_BY_ACCESS_TOKEN_RES];
+
+    required string accessToken = 2; // The Access Token issued for providing access to the Trader's Account.
+    optional ProtoOAClientPermissionScope permissionScope = 3; // SCOPE_VIEW, SCOPE_TRADE.
+    repeated ProtoOACtidTraderAccount ctidTraderAccount = 4; // The list of the accounts.
+}
+
+/** Request for getting the list of granted trader's account for the access token. */
+message ProtoOAGetAccountListByAccessTokenReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_GET_ACCOUNTS_BY_ACCESS_TOKEN_REQ];
+
+    required string accessToken = 2; // The Access Token issued for providing access to the Trader's Account.
+}
+
+/** Request for a list of symbols available for a trading account. Symbol entries are returned with the limited set of fields. */
+message ProtoOASymbolsListReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_SYMBOLS_LIST_REQ];
+
+    required int64 ctidTraderAccountId = 2; // Unique identifier of the trader's account. Used to match responses to trader's accounts.
+    optional bool includeArchivedSymbols = 3 [default = false]; // Whether to include old archived symbols into response.
+}
+
+/** Response to the ProtoOASymbolsListReq request. */
+message ProtoOASymbolsListRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_SYMBOLS_LIST_RES];
+
+    required int64 ctidTraderAccountId = 2; // Unique identifier of the trader's account. Used to match responses to trader's accounts.
+    repeated ProtoOALightSymbol symbol = 3; // The list of symbols.
+    repeated ProtoOAArchivedSymbol archivedSymbol = 4; // The list of archived symbols.
+}
+
+/** Execution entity. */
+message ProtoOADeal {
+    required int64 dealId = 1; // The unique ID of the execution deal.
+    required int64 orderId = 2; // Source order of the deal.
+    required int64 positionId = 3; // Source position of the deal.
+    required int64 volume = 4; // Volume sent for execution, in cents.
+    required int64 filledVolume = 5; // Filled volume, in cents.
+    required int64 symbolId = 6; // The unique identifier of the symbol in specific server environment within cTrader platform. Different servers have different IDs.
+    required int64 createTimestamp = 7; // The Unix time in milliseconds when the deal was sent for execution.
+    required int64 executionTimestamp = 8; // The Unix time in milliseconds when the deal was executed.
+    optional int64 utcLastUpdateTimestamp = 9; // The Unix time in milliseconds when the deal was created, executed or rejected.
+    optional double executionPrice = 10; // Execution price.
+    required ProtoOATradeSide tradeSide = 11; // Buy/Sell.
+    required ProtoOADealStatus dealStatus = 12; // Status of the deal.
+    optional double marginRate = 13; // Rate for used margin computation. Represented as Base/Deposit.
+    optional int64 commission = 14; // Amount of trading commission associated with the deal.
+    optional double baseToUsdConversionRate = 15; // Base to USD conversion rate on the time of deal execution.
+    optional ProtoOAClosePositionDetail closePositionDetail = 16; // Closing position detail. Valid only for closing deal.
+    optional uint32 moneyDigits = 17; // Specifies the exponent of the monetary values. E.g. moneyDigits = 8 must be interpret as business value multiplied by 10^8, then real balance would be 10053099944 / 10^8 = 100.53099944. Affects commission.
+}
+
+/** Execution event type ENUM. */
+enum ProtoOAExecutionType {
+    ORDER_ACCEPTED = 2; // Order passed validation.
+    ORDER_FILLED = 3; // Order filled.
+    ORDER_REPLACED = 4; // Pending order is changed with a new one.
+    ORDER_CANCELLED = 5; // Order cancelled.
+    ORDER_EXPIRED = 6; // Order with GTD time in force is expired.
+    ORDER_REJECTED = 7; // Order is rejected due to validations.
+    ORDER_CANCEL_REJECTED = 8; // Cancel order request is rejected.
+    SWAP = 9; // Type related to SWAP execution events.
+    DEPOSIT_WITHDRAW = 10; // Type related to event of deposit or withdrawal cash flow operation.
+    ORDER_PARTIAL_FILL = 11; // Order is partially filled.
+    BONUS_DEPOSIT_WITHDRAW = 12; // Type related to event of bonus deposit or bonus withdrawal.
+}
+
+enum ProtoOAPositionStatus {
+    POSITION_STATUS_OPEN = 1;
+    POSITION_STATUS_CLOSED = 2;
+    POSITION_STATUS_CREATED = 3; // Empty position is created for pending order.
+    POSITION_STATUS_ERROR = 4;
+}
+
+message ProtoOAPosition {
+    required int64 positionId = 1; // The unique ID of the position. Note: trader might have two positions with the same id if positions are taken from accounts from different brokers.
+    required ProtoOATradeData tradeData = 2; // Position details. See ProtoOATradeData for details.
+    required ProtoOAPositionStatus positionStatus = 3; // Current status of the position.
+    required int64 swap = 4; // Total amount of charged swap on open position.
+    optional double price = 5; // VWAP price of the position based on all executions (orders) linked to the position.
+    optional double stopLoss = 6; // Current stop loss price.
+    optional double takeProfit = 7; // Current take profit price.
+    optional int64 utcLastUpdateTimestamp = 8; // The Unix time in milliseconds of the last change of the position, including amend SL/TP of the position, execution of related order, cancel or related order, etc.
+    optional int64 commission = 9; // Current unrealized commission related to the position.
+    optional double marginRate = 10; // Rate for used margin computation. Represented as Base/Deposit.
+    optional int64 mirroringCommission = 11; // Amount of unrealized commission related to following of strategy provider.
+    optional bool guaranteedStopLoss = 12; // If TRUE then position's stop loss is guaranteedStopLoss.
+    optional uint64 usedMargin = 13; // Amount of margin used for the position in deposit currency.
+    optional ProtoOAOrderTriggerMethod stopLossTriggerMethod = 14 [default = TRADE]; // Stop trigger method for SL/TP of the position.
+    optional uint32 moneyDigits = 15; // Specifies the exponent of the monetary values. E.g. moneyDigits = 8 must be interpret as business value multiplied by 10^8, then real balance would be 10053099944 / 10^8 = 100.53099944. Affects swap, commission, mirroringCommission, usedMargin.
+    optional bool trailingStopLoss = 16; //If TRUE then the Trailing Stop Loss is applied.
+}
+
+/** Event that is sent when a new spot event is generated on the server side. Requires subscription on the spot events, see ProtoOASubscribeSpotsReq. First event, received after subscription will contain latest spot prices even if market is closed. */
+message ProtoOASpotEvent {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_SPOT_EVENT];
+
+    required int64 ctidTraderAccountId = 2; // Unique identifier of the trader's account. Used to match responses to trader's accounts.
+    required int64 symbolId = 3; // Unique identifier of the Symbol in cTrader platform.
+    optional uint64 bid = 4; // Bid price. Specified in 1/100000 of unit of a price. (e.g. 123000 in protocol means 1.23, 53423782 means 534.23782)
+    optional uint64 ask = 5; // Ask price. Specified in 1/100000 of unit of a price. (e.g. 123000 in protocol means 1.23, 53423782 means 534.23782)
+    repeated ProtoOATrendbar trendbar = 6; // Returns live trend bar. Requires subscription on the trend bars.
+    optional uint64 sessionClose = 7;// Last session close. Specified in 1/100000 of unit of a price. (e.g. 123000 in protocol means 1.23, 53423782 means 534.23782)
+    optional int64 timestamp = 8; // The Unix time for spot.
+}
+
+/** Request for subscribing on spot events of the specified symbol. After successful subscription you'll receive technical ProtoOASpotEvent with latest price, after which you'll start receiving updates on prices via consequent ProtoOASpotEvents. */
+message ProtoOASubscribeSpotsReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_SUBSCRIBE_SPOTS_REQ];
+
+    required int64 ctidTraderAccountId = 2; // Unique identifier of the trader's account. Used to match responses to trader's accounts.
+    repeated int64 symbolId = 3; // Unique identifier of the Symbol in cTrader platform.
+    optional bool subscribeToSpotTimestamp = 4; // If TRUE you will also receive the timestamp in ProtoOASpotEvent.
+}
+
+/** Response to the ProtoOASubscribeSpotsReq request. Reflects that your request to subscribe for symbol has been added to queue. You'll receive technical ProtoOASpotEvent with current price shortly after this response. */
+message ProtoOASubscribeSpotsRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_SUBSCRIBE_SPOTS_RES];
+
+    required int64 ctidTraderAccountId = 2; // Unique identifier of the trader's account. Used to match responses to trader's accounts.
+}
+
+/** Request for unsubscribing from the spot events of the specified symbol. Request to stop receiving ProtoOASpotEvents related to particular symbols. Unsubscription is useful to minimize traffic, especially during high volatility events. */
+message ProtoOAUnsubscribeSpotsReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_UNSUBSCRIBE_SPOTS_REQ];
+
+    required int64 ctidTraderAccountId = 2; // Unique identifier of the trader's account. Used to match responses to trader's accounts.
+    repeated int64 symbolId = 3; // Unique identifier of the Symbol in cTrader platform.
+}
+
+
