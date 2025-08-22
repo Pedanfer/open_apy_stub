@@ -1,8 +1,8 @@
 This is the useful skeleton of WebSockets Client for cTrader's Open API in Python. 
 
-I might or might not implement a package using it in the future. In any case, feel free to make use of this code for you project.
+I didn't want to use the SDK (and I can't remember why) and this turned out to be a simple and effective alternative that doesn't add another dependency to your project.
 
-I didn't want to use the SDK this and this turned out to be a simple and effective alternative. 
+I might or might not implement a package using it in the future. In any case, feel free to make use of this code for you project.
 
 It doesn't use Protobufs because most people just dont need that overhead for maximum performance.The perfomance with JSON is good enough for most.
 
