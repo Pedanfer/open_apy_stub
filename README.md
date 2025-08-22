@@ -23,8 +23,12 @@ Later, we simply will use the emitter or receiver of the controller in other par
          await WebsocketsClientController.client.client_ready_event.wait()
 
          trade_side = TradeSide.BUY
+         symbol = "EUR/USD"
 
-         await WebsocketsClientController.client.message_emitter.open_trade(
-              trade_side, self.robot.id, self.robot.symbol, stop_loss, take_profit
+         # These values are in pips
+         stop_loss = 20
+         take_profit = 35
+
+         await WebsocketsClientController.client.message_emitter.open_trade(trade_side, symbol, stop_loss, take_profit)
 
 Happy coding and trading!
